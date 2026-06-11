@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <base href="/">
+    <title>Bellfort Banking Demo</title>
+    <meta name="description" content="Bellfort Banking static partner demo.">
+    <link rel="icon" type="image/svg+xml" href="assets/bellfort-mark.svg">
+    <link rel="stylesheet" href="styles.css?v=1">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="./" data-route="home" aria-label="Bellfort Banking home">
+          <img src="assets/bellfort-mark.svg" alt="" class="brand-logo">
+          <span>
+            <strong>Bellfort Banking</strong>
+            <small>Partner demo</small>
+          </span>
+        </a>
+
+        <nav class="nav" aria-label="Demo navigation">
+          <button type="button" data-route="home" class="active">Home</button>
+          <button type="button" data-route="receive">Receive</button>
+          <button type="button" data-route="send">Send</button>
+          <button type="button" data-route="cards">Cards</button>
+          <button type="button" data-route="crypto">Crypto</button>
+          <button type="button" data-route="casino">Casino Window</button>
+        </nav>
+
+        <div class="sidebar-note">
+          <strong>Static demo</strong>
+          <span>No real payments, cards, crypto transfers, or backend access.</span>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Bellfort Banking</p>
+            <h1 id="page-title">Client demo</h1>
+          </div>
+          <div class="top-actions">
+            <span class="mode-pill">Demo only</span>
+            <button type="button" class="ghost" data-route="receive">Start</button>
+          </div>
+        </header>
+
+        <section id="view" class="view" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <script src="app.js?v=1" defer></script>
+  </body>
+</html>
