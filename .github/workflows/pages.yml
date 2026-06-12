@@ -32,7 +32,7 @@ jobs:
           cp -R assets dist/assets
           REPO_NAME="${GITHUB_REPOSITORY#*/}"
           sed -i "s|<base href=\"/\">|<base href=\"/${REPO_NAME}/\">|" dist/index.html
-          for route in merchant merchant/payments merchant/send merchant/cards merchant/crypto casino-window; do
+          for route in merchant merchant/payments merchant/send merchant/convert merchant/cards merchant/crypto casino-window; do
             mkdir -p "dist/${route}"
             cp dist/index.html "dist/${route}/index.html"
           done

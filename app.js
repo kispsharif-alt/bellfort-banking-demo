@@ -4,7 +4,10 @@ const state = {
     receive: "card",
     send: "iban",
     crypto: "receive",
-    asset: "BTC"
+    asset: "BTC",
+    convertSide: "from",
+    convertFrom: "EUR",
+    convertTo: "BTC"
   },
   result: null
 };
@@ -21,6 +24,10 @@ const routes = {
   send: {
     title: "Send money",
     render: renderSend
+  },
+  convert: {
+    title: "Convert",
+    render: renderConvert
   },
   cards: {
     title: "Cards",
@@ -55,8 +62,50 @@ const cryptoAssets = [
   ["BTC", "Bitcoin", "Bitcoin"],
   ["ETH", "Ethereum", "Ethereum"],
   ["USDT", "Tether USD", "TRC20 / ERC20"],
+  ["SOL", "Solana", "Solana"],
   ["USDC", "USD Coin", "ERC20"]
 ];
+
+const fiatCurrencies = [
+  ["EUR", "🇪🇺", "Euro", "European Union", 1.08],
+  ["USD", "🇺🇸", "US dollar", "United States", 1],
+  ["GBP", "🇬🇧", "Pound sterling", "United Kingdom", 1.27],
+  ["CHF", "🇨🇭", "Swiss franc", "Switzerland", 1.11],
+  ["PLN", "🇵🇱", "Polish zloty", "Poland", 0.25],
+  ["DKK", "🇩🇰", "Danish krone", "Denmark", 0.14],
+  ["NOK", "🇳🇴", "Norwegian krone", "Norway", 0.095],
+  ["SEK", "🇸🇪", "Swedish krona", "Sweden", 0.096],
+  ["CZK", "🇨🇿", "Czech koruna", "Czechia", 0.043],
+  ["HUF", "🇭🇺", "Hungarian forint", "Hungary", 0.0028],
+  ["RON", "🇷🇴", "Romanian leu", "Romania", 0.22],
+  ["BGN", "🇧🇬", "Bulgarian lev", "Bulgaria", 0.55],
+  ["TRY", "🇹🇷", "Turkish lira", "Turkey", 0.031],
+  ["AED", "🇦🇪", "UAE dirham", "United Arab Emirates", 0.27],
+  ["CAD", "🇨🇦", "Canadian dollar", "Canada", 0.73],
+  ["AUD", "🇦🇺", "Australian dollar", "Australia", 0.66],
+  ["NZD", "🇳🇿", "New Zealand dollar", "New Zealand", 0.61],
+  ["SGD", "🇸🇬", "Singapore dollar", "Singapore", 0.74],
+  ["HKD", "🇭🇰", "Hong Kong dollar", "Hong Kong", 0.13],
+  ["JPY", "🇯🇵", "Japanese yen", "Japan", 0.0067],
+  ["CNY", "🇨🇳", "Chinese yuan", "China", 0.14],
+  ["INR", "🇮🇳", "Indian rupee", "India", 0.012],
+  ["BRL", "🇧🇷", "Brazilian real", "Brazil", 0.19],
+  ["MXN", "🇲🇽", "Mexican peso", "Mexico", 0.054],
+  ["ZAR", "🇿🇦", "South African rand", "South Africa", 0.054],
+  ["KZT", "🇰🇿", "Kazakhstani tenge", "Kazakhstan", 0.0022],
+  ["UAH", "🇺🇦", "Ukrainian hryvnia", "Ukraine", 0.025],
+  ["GEL", "🇬🇪", "Georgian lari", "Georgia", 0.37],
+  ["AMD", "🇦🇲", "Armenian dram", "Armenia", 0.0026],
+  ["KGS", "🇰🇬", "Kyrgyzstani som", "Kyrgyzstan", 0.011]
+];
+
+const cryptoRates = {
+  BTC: 65000,
+  ETH: 3500,
+  USDT: 1,
+  SOL: 150,
+  USDC: 1
+};
 
 document.addEventListener("click", (event) => {
   const routeButton = event.target.closest("[data-route]");
@@ -77,6 +126,24 @@ document.addEventListener("click", (event) => {
   const assetButton = event.target.closest("[data-asset]");
   if (assetButton) {
     state.methods.asset = assetButton.dataset.asset;
+    state.result = null;
+    render();
+    return;
+  }
+
+  const convertSideButton = event.target.closest("[data-convert-side]");
+  if (convertSideButton) {
+    state.methods.convertSide = convertSideButton.dataset.convertSide;
+    state.result = null;
+    render();
+    return;
+  }
+
+  const convertValueButton = event.target.closest("[data-convert-value]");
+  if (convertValueButton) {
+    const side = state.methods.convertSide;
+    state.methods[side === "to" ? "convertTo" : "convertFrom"] = convertValueButton.dataset.convertValue;
+    if (side === "from") state.methods.convertSide = "to";
     state.result = null;
     render();
   }
@@ -106,6 +173,7 @@ function routeFromLocation() {
   const segment = path.split("/").filter(Boolean).pop();
   if (segment === "payments") return "receive";
   if (segment === "send") return "send";
+  if (segment === "convert") return "convert";
   if (segment === "cards") return "cards";
   if (segment === "crypto") return "crypto";
   if (segment === "casino-window") return "casino";
@@ -119,6 +187,7 @@ function navigate(route) {
     home: "",
     receive: "merchant/payments/",
     send: "merchant/send/",
+    convert: "merchant/convert/",
     cards: "merchant/cards/",
     crypto: "merchant/crypto/",
     casino: "casino-window/"
@@ -148,6 +217,7 @@ function renderHome() {
         <div class="hero-actions">
           <button class="primary" type="button" data-route="receive">Receive</button>
           <button class="secondary" type="button" data-route="send">Send</button>
+          <button class="secondary" type="button" data-route="convert">Convert</button>
           <button class="secondary" type="button" data-route="cards">Cards</button>
           <button class="secondary" type="button" data-route="crypto">Crypto</button>
         </div>
@@ -169,8 +239,9 @@ function renderHome() {
     <section class="grid feature-grid">
       ${featureCard("R", "Receive", "Card, SEPA, IBAN, bank transfer, and crypto instructions.", "receive")}
       ${featureCard("S", "Send", "IBAN, SEPA, local bank, and crypto payout requests.", "send")}
+      ${featureCard("F", "Convert", "Fiat country currencies and crypto assets with one-click selection.", "convert")}
       ${featureCard("C", "Cards", "Virtual and physical card order demo with 3DS phone field.", "cards")}
-      ${featureCard("X", "Crypto", "BTC, ETH, USDT, and USDC wallet request demo.", "crypto")}
+      ${featureCard("X", "Crypto", "BTC, ETH, USDT, SOL, and USDC wallet request demo.", "crypto")}
       ${featureCard("W", "Casino Window", "Separate merchant window using confirmed internal payment only.", "casino")}
     </section>
   `;
@@ -266,6 +337,64 @@ function renderCards() {
       </div>
       ${resultCard()}
     `
+  });
+}
+
+function renderConvert() {
+  const from = state.methods.convertFrom;
+  const to = state.methods.convertTo;
+  const quote = convertQuote(1000, from, to);
+  return pageLayout({
+    heading: "Convert",
+    text: "Select a From box, click a fiat or crypto currency, then choose the To currency. All values are mock indicative rates.",
+    methods: `
+      <div class="convert-frame-grid">
+        ${convertFrame("from", "From", from)}
+        ${convertFrame("to", "To", to)}
+      </div>
+    `,
+    form: `
+      <form data-flow="convert">
+        <div class="form-grid">
+          ${field("Amount", "amount", "1000.00")}
+          ${field("Indicative result", "result", quote.output)}
+          ${field("From", "fromCurrency", from)}
+          ${field("To", "toCurrency", to)}
+          ${select("Purpose", "purpose", ["Treasury", "Travel", "Invoice", "Own account", "Other"])}
+          ${field("Reference", "reference", "FX-2026-001")}
+        </div>
+        <div class="form-actions">
+          <button class="primary" type="submit">Create convert request</button>
+          <span class="hint">Rates are mock values for presentation only</span>
+        </div>
+      </form>
+
+      <div class="currency-section">
+        <div class="section-heading">
+          <h3>Fiat currencies</h3>
+          <span class="hint">Country flags fill the active box</span>
+        </div>
+        <div class="currency-grid">
+          ${fiatCurrencies.map((currency) => currencyCard(currency)).join("")}
+        </div>
+      </div>
+
+      <div class="currency-section">
+        <div class="section-heading">
+          <h3>Crypto assets</h3>
+          <span class="hint">BTC, ETH, USDT, SOL, USDC</span>
+        </div>
+        <div class="asset-grid">
+          ${cryptoAssets.map(([code, name, network]) => cryptoConvertCard(code, name, network)).join("")}
+        </div>
+      </div>
+    `,
+    aside: summary("Convert", [
+      ["From", currencyLabel(from)],
+      ["To", currencyLabel(to)],
+      ["Indicative rate", quote.rate],
+      ["Status", "Demo quote ready"]
+    ])
   });
 }
 
@@ -366,6 +495,60 @@ function methodButtons(group, list, active) {
       `).join("")}
     </div>
   `;
+}
+
+function convertFrame(side, label, code) {
+  return `
+    <button type="button" class="convert-frame ${state.methods.convertSide === side ? "active" : ""}" data-convert-side="${side}">
+      <span>${label}</span>
+      <strong>${code}</strong>
+      <small>${currencyLabel(code)}</small>
+    </button>
+  `;
+}
+
+function currencyCard([code, flag, name, country]) {
+  const selected = state.methods.convertFrom === code || state.methods.convertTo === code;
+  return `
+    <button type="button" class="currency-card ${selected ? "selected" : ""}" data-convert-value="${code}">
+      <span class="flag">${flag}</span>
+      <strong>${code}</strong>
+      <small>${name} / ${country}</small>
+    </button>
+  `;
+}
+
+function cryptoConvertCard(code, name, network) {
+  const selected = state.methods.convertFrom === code || state.methods.convertTo === code;
+  return `
+    <button type="button" class="asset ${selected ? "active" : ""}" data-convert-value="${code}">
+      <strong>${code}</strong>
+      <span>${name} / ${network}</span>
+    </button>
+  `;
+}
+
+function currencyLabel(code) {
+  const fiat = fiatCurrencies.find((item) => item[0] === code);
+  if (fiat) return `${fiat[1]} ${fiat[2]}`;
+  const crypto = cryptoAssets.find((item) => item[0] === code);
+  if (crypto) return `${crypto[1]}`;
+  return code;
+}
+
+function convertQuote(amount, from, to) {
+  const fromUsd = fiatCurrencies.find((item) => item[0] === from)?.[4] || cryptoRates[from] || 1;
+  const toUsd = fiatCurrencies.find((item) => item[0] === to)?.[4] || cryptoRates[to] || 1;
+  const value = amount * fromUsd / toUsd;
+  const output = `${formatAmount(value)} ${to}`;
+  const rate = `1 ${from} = ${formatAmount(fromUsd / toUsd)} ${to}`;
+  return { output, rate };
+}
+
+function formatAmount(value) {
+  if (value >= 1000) return value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  if (value >= 1) return value.toLocaleString("en-US", { maximumFractionDigits: 4 });
+  return value.toLocaleString("en-US", { maximumFractionDigits: 8 });
 }
 
 function receiveFields(method) {
